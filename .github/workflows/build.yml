@@ -94,7 +94,38 @@ jobs:
           gradle-version: 8.5
 
       # --------------------------------------------------
-      # 6. 构建 APK（使用 Gradle Wrapper + 输出到 Step Summary）
+      # 6. 调试：检查环境和 Gradle
+      # --------------------------------------------------
+      - name: 调试：环境检查
+        run: |
+          echo "## 🔧 环境诊断" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "PWD: $(pwd)"
+          echo "JAVA_HOME: $JAVA_HOME"
+          echo "ANDROID_HOME: $ANDROID_HOME"
+          java -version 2>&1
+          ls -la gradlew 2>/dev/null || echo "gradlew not found"
+          ls -la gradle/ 2>/dev/null
+          ls -la gradle/wrapper/ 2>/dev/null
+          file gradle/wrapper/gradle-wrapper.jar 2>/dev/null || echo "wrapper jar not found"
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+      # --------------------------------------------------
+      # 7. 调试：Gradle Wrapper 版本检查
+      # --------------------------------------------------
+      - name: 调试：Gradle 版本
+        run: |
+          echo "## 🔧 Gradle 版本检查" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          chmod +x gradlew 2>/dev/null
+          ./gradlew --version --no-daemon 2>&1
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+      # --------------------------------------------------
+      # 8. 构建 APK
       # --------------------------------------------------
       - name: 构建 APK
         run: |
@@ -103,51 +134,18 @@ jobs:
           echo "🧩 命名空间: com.murong.prioritylocker"
           echo ""
 
-          echo "🔧 Java 版本:" | tee -a /tmp/gradle-build.log
-          java -version 2>&1 | tee -a /tmp/gradle-build.log
-          echo "" | tee -a /tmp/gradle-build.log
-
-          # 使用 Gradle Wrapper（更可靠，不依赖 setup-gradle 的缓存）
-          WRAPPER="./gradlew"
-          if [ -f "$WRAPPER" ]; then
-            echo "🔧 使用 Gradle Wrapper: $WRAPPER" | tee -a /tmp/gradle-build.log
-            chmod +x "$WRAPPER"
-            "$WRAPPER" --version 2>&1 | tee -a /tmp/gradle-build.log
-            echo "" | tee -a /tmp/gradle-build.log
-            "$WRAPPER" assemble${BUILD_TYPE^} --no-daemon --stacktrace 2>&1 | tee -a /tmp/gradle-build.log
-          else
-            echo "🔧 Wrapper 不存在，使用系统 gradle 命令" | tee -a /tmp/gradle-build.log
-            gradle --version 2>&1 | tee -a /tmp/gradle-build.log
-            echo "" | tee -a /tmp/gradle-build.log
-            gradle assemble${BUILD_TYPE^} --no-daemon --stacktrace 2>&1 | tee -a /tmp/gradle-build.log
-          fi
-          RESULT=${PIPESTATUS[0]}
-
-          echo "" | tee -a /tmp/gradle-build.log
-          echo "=== 构建退出码: ${RESULT} ===" | tee -a /tmp/gradle-build.log
-
-          # 输出到 Step Summary
-          echo "## 📋 Gradle 构建日志（结尾 50 行）" >> $GITHUB_STEP_SUMMARY
+          echo "## 📋 Gradle 构建日志" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
-          tail -50 /tmp/gradle-build.log >> $GITHUB_STEP_SUMMARY
+          chmod +x gradlew
+          ./gradlew assemble${BUILD_TYPE^} --no-daemon --stacktrace 2>&1 | tee -a /tmp/gradle-build.log
+          RESULT=${PIPESTATUS[0]}
+          echo "=== 构建退出码: ${RESULT} ==="
           echo '```' >> $GITHUB_STEP_SUMMARY
-
           exit ${RESULT}
 
       # --------------------------------------------------
-      # 7a. 上传 Gradle 构建日志（即使失败也上传）
-      # --------------------------------------------------
-      - name: 上传构建日志
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: "build-log"
-          path: /tmp/gradle-build.log
-          retention-days: 7
-
-      # --------------------------------------------------
-      # 7b. 上传 APK 为构建产物
+      # 9. 上传 APK 为构建产物
       # --------------------------------------------------
       - name: 上传 APK 产物
         uses: actions/upload-artifact@v4
@@ -159,7 +157,7 @@ jobs:
           retention-days: 30
 
       # --------------------------------------------------
-      # 8. 输出 APK 信息
+      # 10. 输出 APK 信息
       # --------------------------------------------------
       - name: APK 信息摘要
         run: |
@@ -174,7 +172,7 @@ jobs:
           done
 
       # --------------------------------------------------
-      # 9. Release 事件 → 上传到 Release 附件
+      # 11. Release 事件 → 上传到 Release 附件
       # --------------------------------------------------
       - name: 上传到 GitHub Release
         if: github.event_name == 'release'
