@@ -103,7 +103,17 @@ jobs:
           echo "🧩 命名空间: com.murong.prioritylocker"
           echo ""
 
-          gradle assemble${BUILD_TYPE^} --no-daemon --stacktrace
+          # 优先使用 Gradle wrapper，否则用系统 gradle 命令
+          if [ -f "./gradlew" ]; then
+            echo "🔧 使用 Gradle Wrapper (gradlew)"
+            chmod +x gradlew
+            ./gradlew assemble${BUILD_TYPE^} --no-daemon --stacktrace --info
+          else
+            echo "🔧 使用系统 gradle 命令"
+            which gradle || echo "⚠️ gradle not in PATH"
+            gradle --version || echo "⚠️ gradle version check failed"
+            gradle assemble${BUILD_TYPE^} --no-daemon --stacktrace --info
+          fi
 
       # --------------------------------------------------
       # 7. 上传 APK 为构建产物
