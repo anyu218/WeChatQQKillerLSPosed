@@ -1,0 +1,171 @@
+# ============================================================
+# PriorityLocker Pro — GitHub Actions 自动构建工作流
+# 
+# 触发方式：
+#   1. push / PR → 自动构建 release APK 并上传为产物
+#   2. 打 tag (如 v10.0-lsposed) → 额外上传到 Release 附件
+#   3. 手动 — 可在 GitHub 页面选择 release/debug
+# ============================================================
+name: Build APK
+
+on:
+  push:
+    branches: [ main, master ]
+    paths-ignore:
+      - 'README.md'
+      - '.gitignore'
+      - '.github/**'
+
+  pull_request:
+    branches: [ main, master ]
+
+  # 发布 Release 时自动上传 APK 到附件
+  release:
+    types: [ published ]
+
+  # 手动触发
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: '构建类型'
+        required: true
+        default: 'release'
+        type: choice
+        options:
+          - release
+          - debug
+
+# ============================================================
+jobs:
+  build:
+    name: "构建 ${{ inputs.build_type || 'release' }} APK"
+    runs-on: ubuntu-latest
+
+    steps:
+      # --------------------------------------------------
+      # 1. 检出代码
+      # --------------------------------------------------
+      - name: 检出仓库
+        uses: actions/checkout@v4
+
+      # --------------------------------------------------
+      # 2. JDK 17 (AGP 8.x + Gradle 8.x 必需)
+      # --------------------------------------------------
+      - name: 设置 JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: 17
+
+      # --------------------------------------------------
+      # 3. 缓存 Gradle 依赖 (加速后续构建)
+      # --------------------------------------------------
+      - name: 缓存 Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      # --------------------------------------------------
+      # 4. 安装 Android SDK 34 + Build-Tools
+      # --------------------------------------------------
+      - name: 安装 Android SDK 组件
+        run: |
+          # GitHub Actions 自带 Android SDK
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
+
+          # 直接使用 sdkmanager（默认已安装）
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager \
+            "platforms;android-34" \
+            "build-tools;34.0.0" \
+            2>&1 | tail -5 || echo "⚠️ sdkmanager 不可用，尝试默认 SDK"
+
+      # --------------------------------------------------
+      # 5. 设置 Gradle
+      # --------------------------------------------------
+      - name: 设置 Gradle 8.5
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: 8.5
+
+      # --------------------------------------------------
+      # 6. 构建 APK
+      # --------------------------------------------------
+      - name: 构建 APK
+        run: |
+          BUILD_TYPE="${{ inputs.build_type || 'release' }}"
+          echo "📦 构建类型: ${BUILD_TYPE}"
+          echo "🧩 命名空间: com.murong.prioritylocker"
+          echo ""
+
+          gradle assemble${BUILD_TYPE^} --no-daemon --stacktrace
+
+      # --------------------------------------------------
+      # 7. 上传 APK 为构建产物
+      # --------------------------------------------------
+      - name: 上传 APK 产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: "PriorityLocker-Pro-${{ inputs.build_type || 'release' }}"
+          path: |
+            app/build/outputs/apk/**/*.apk
+          if-no-files-found: error      # 找不到 APK 就报错
+          retention-days: 30
+
+      # --------------------------------------------------
+      # 8. 输出 APK 信息
+      # --------------------------------------------------
+      - name: APK 信息摘要
+        run: |
+          echo "## 📊 APK 构建结果" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| 文件 | 大小 |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|------|" >> $GITHUB_STEP_SUMMARY
+          find app/build/outputs/apk -name "*.apk" 2>/dev/null | while read f; do
+            size=$(ls -lh "$f" | awk '{print $5}')
+            name=$(basename "$f")
+            echo "| $name | $size |" >> $GITHUB_STEP_SUMMARY
+          done
+
+      # --------------------------------------------------
+      # 9. Release 事件 → 上传到 Release 附件
+      # --------------------------------------------------
+      - name: 上传到 GitHub Release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: app/build/outputs/apk/release/app-release.apk
+          fail_on_unmatched_files: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ============================================================
+  # Lint 检查 (可选，不影响构建结果)
+  # ============================================================
+  lint:
+    name: "Lint 代码检查"
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: 8.5
+      - name: 运行 Lint
+        run: gradle lint --no-daemon
+      - name: 上传 Lint 报告
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lint-report
+          path: app/build/reports/lint-results*.html
+          retention-days: 14

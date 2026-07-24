@@ -1,0 +1,2 @@
+-keep class com.murong.prioritylocker.** { *; }
+-keep class de.robv.android.xposed.** { *; }

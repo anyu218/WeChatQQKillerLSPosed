@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- 盾牌图标 -->
+    <path
+        android:pathData="M54,20 L25,33 L25,52 C25,72 38,88 54,93 C70,88 83,72 83,52 L83,33 Z"
+        android:fillColor="#a78bfa" />
+    <!-- 锁图标 -->
+    <path
+        android:pathData="M54,42 L54,45 M49,45 L59,45 L59,52 L49,52 Z M54,48 L54,53"
+        android:strokeColor="#ffffff"
+        android:strokeWidth="2.5"
+        android:fillColor="@android:color/transparent" />
+    <path
+        android:pathData="M48,50 L60,50 L60,58 L48,58 Z"
+        android:fillColor="#ffffff" />
+</vector>

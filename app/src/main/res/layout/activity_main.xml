@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="16dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="🔒 PriorityLocker Pro"
+            android:textSize="22sp"
+            android:textColor="#a78bfa"
+            android:textStyle="bold"
+            android:layout_marginBottom="16dp" />
+
+        <!-- 状态卡片 -->
+        <TextView
+            android:id="@+id/status_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/card_bg"
+            android:padding="16dp"
+            android:textSize="14sp"
+            android:textColor="#e0e0e0"
+            android:lineSpacingExtra="4dp"
+            android:layout_marginBottom="12dp" />
+
+        <!-- 按钮行 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="12dp">
+
+            <Button
+                android:id="@+id/toggle_btn"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_weight="1"
+                android:text="启动/停止"
+                android:textColor="#fff"
+                android:background="@drawable/btn_rounded"
+                android:layout_marginEnd="6dp" />
+
+            <Button
+                android:id="@+id/webui_btn"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_weight="1"
+                android:text="🌐 WebUI"
+                android:textColor="#fff"
+                android:background="@drawable/btn_rounded"
+                android:layout_marginStart="3dp"
+                android:layout_marginEnd="3dp" />
+
+            <Button
+                android:id="@+id/refresh_btn"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_weight="1"
+                android:text="🔄 刷新"
+                android:textColor="#fff"
+                android:background="@drawable/btn_rounded"
+                android:layout_marginStart="6dp" />
+        </LinearLayout>
+
+        <!-- 日志卡片标题 -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="📋 最近日志"
+            android:textSize="16sp"
+            android:textColor="#a78bfa"
+            android:layout_marginBottom="8dp" />
+
+        <!-- 日志内容 -->
+        <TextView
+            android:id="@+id/log_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/card_bg"
+            android:padding="12dp"
+            android:textSize="11sp"
+            android:textColor="#aaaaaa"
+            android:typeface="monospace"
+            android:lineSpacingExtra="2dp"
+            android:minLines="8" />
+
+    </LinearLayout>
+
+</ScrollView>

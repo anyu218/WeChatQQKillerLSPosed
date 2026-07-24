@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.PriorityLocker" parent="android:Theme.Material.NoActionBar">
+        <item name="android:colorPrimary">#7c3aed</item>
+        <item name="android:colorPrimaryDark">#5b21b6</item>
+        <item name="android:colorAccent">#a78bfa</item>
+        <item name="android:statusBarColor">#0b0b1a</item>
+        <item name="android:navigationBarColor">#0b0b1a</item>
+        <item name="android:windowBackground">#0b0b1a</item>
+        <item name="android:textColor">#ffffff</item>
+    </style>
+</resources>

@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- LSPosed 模块不需要额外权限，hook 权限由框架授予 -->
+
+    <application
+        android:allowBackup="false"
+        android:icon="@mipmap/ic_launcher"
+        android:label="PriorityLocker Pro"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.PriorityLocker">
+
+        <!-- Xposed 模块声明 -->
+        <meta-data
+            android:name="xposedmodule"
+            android:value="true" />
+        <meta-data
+            android:name="xposeddescription"
+            android:value="全局第三方后台进程压制 + 白名单豁免。前台只压子进程，后台全压，系统服务不动。通知/留存不受影响。LSPosed 版" />
+        <meta-data
+            android:name="xposedminversion"
+            android:value="53" />
+
+        <!-- 主 Activity：模块管理和 WebUI 入口 -->
+        <activity
+            android:name="com.murong.prioritylocker.ui.MainActivity"
+            android:exported="true"
+            android:theme="@style/Theme.PriorityLocker">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- 守护服务（用于 WebUI） -->
+        <service
+            android:name="com.murong.prioritylocker.service.WebUIService"
+            android:exported="false" />
+
+    </application>
+
+</manifest>
