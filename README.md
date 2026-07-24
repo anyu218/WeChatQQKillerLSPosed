@@ -186,3 +186,4 @@ WeChatQQKiller_LSPosed/
 ## License
 
 Apache 2.0
+# CI build trigger
