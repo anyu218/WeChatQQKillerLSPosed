@@ -94,7 +94,7 @@ jobs:
           gradle-version: 8.5
 
       # --------------------------------------------------
-      # 6. 构建 APK（捕获完整日志）
+      # 6. 构建 APK（输出到 Step Summary）
       # --------------------------------------------------
       - name: 构建 APK
         run: |
@@ -103,19 +103,28 @@ jobs:
           echo "🧩 命名空间: com.murong.prioritylocker"
           echo ""
 
-          echo "🔧 Java 版本:"
-          java -version 2>&1
-          echo ""
+          echo "🔧 Java 版本:" | tee -a /tmp/gradle-build.log
+          java -version 2>&1 | tee -a /tmp/gradle-build.log
+          echo "" | tee -a /tmp/gradle-build.log
 
-          echo "🔧 Gradle 版本:"
-          gradle --version 2>&1
-          echo ""
+          echo "🔧 Gradle 版本:" | tee -a /tmp/gradle-build.log
+          gradle --version 2>&1 | tee -a /tmp/gradle-build.log
+          echo "" | tee -a /tmp/gradle-build.log
 
-          # 捕获完整输出到日志文件
-          gradle assemble${BUILD_TYPE^} --no-daemon --stacktrace 2>&1 | tee /tmp/gradle-build.log
+          # 捕获构建输出
+          gradle assemble${BUILD_TYPE^} --no-daemon --stacktrace 2>&1 | tee -a /tmp/gradle-build.log
           RESULT=${PIPESTATUS[0]}
-          echo ""
-          echo "=== 构建退出码: ${RESULT} ==="
+
+          echo "" | tee -a /tmp/gradle-build.log
+          echo "=== 构建退出码: ${RESULT} ===" | tee -a /tmp/gradle-build.log
+
+          # 输出到 Step Summary
+          echo "## 📋 Gradle 构建日志（结尾 50 行）" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          tail -50 /tmp/gradle-build.log >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
           exit ${RESULT}
 
       # --------------------------------------------------
