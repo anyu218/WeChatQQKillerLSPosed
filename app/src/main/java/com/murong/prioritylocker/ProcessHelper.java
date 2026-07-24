@@ -37,7 +37,7 @@ public class ProcessHelper {
      */
     public static String getForegroundPackage() {
         try {
-            Process proc = Runtime.getRuntime().exec("dumpsys window");
+            java.lang.Process proc = Runtime.getRuntime().exec("dumpsys window");
             try (BufferedReader br = new BufferedReader(
                     new java.io.InputStreamReader(proc.getInputStream()))) {
                 String line;
@@ -104,7 +104,7 @@ public class ProcessHelper {
     public static Set<String> getThirdPartyPackages() {
         Set<String> pkgs = new HashSet<>();
         try {
-            Process proc = Runtime.getRuntime().exec("pm list packages -3");
+            java.lang.Process proc = Runtime.getRuntime().exec("pm list packages -3");
             try (BufferedReader br = new BufferedReader(
                     new java.io.InputStreamReader(proc.getInputStream()))) {
                 String line;
@@ -127,7 +127,7 @@ public class ProcessHelper {
     public static Set<String> getAllPackages() {
         Set<String> pkgs = new HashSet<>();
         try {
-            Process proc = Runtime.getRuntime().exec("pm list packages");
+            java.lang.Process proc = Runtime.getRuntime().exec("pm list packages");
             try (BufferedReader br = new BufferedReader(
                     new java.io.InputStreamReader(proc.getInputStream()))) {
                 String line;
@@ -217,7 +217,7 @@ public class ProcessHelper {
         try {
             // 方法 1：设置进程组为 BACKGROUND（限制 CPU 使用率 ~10%）
             // THREAD_GROUP_BACKGROUND = 0
-            Process.setProcessGroup(pid, 0);
+            android.os.Process.setProcessGroup(pid, 0);
             success = true;
         } catch (Exception e) {
             ConfigManager.getInstance().log("setProcessGroup(" + pid + ") 失败: " + e.getMessage());
@@ -226,7 +226,8 @@ public class ProcessHelper {
         try {
             // 方法 2：直接系统调用 setpriority(PRIO_PROCESS, pid, 19)
             // 等效于 renice -n 19 -p pid
-            Os.setpriority(OsConstants.PRIO_PROCESS, pid, 19);
+            // PRIO_PROCESS = 0 (POSIX 标准值)
+            Os.setpriority(/* PRIO_PROCESS */ 0, pid, 19);
             success = true;
         } catch (Exception e) {
             ConfigManager.getInstance().log("Os.setpriority(" + pid + ") 失败: " + e.getMessage());
@@ -234,7 +235,7 @@ public class ProcessHelper {
 
         try {
             // 方法 3：setThreadPriority（对主线程有效）
-            Process.setThreadPriority(pid, Process.THREAD_PRIORITY_LOWEST);
+            android.os.Process.setThreadPriority(pid, android.os.Process.THREAD_PRIORITY_LOWEST);
             success = true;
         } catch (Exception e) {
             ConfigManager.getInstance().log("setThreadPriority(" + pid + ") 失败: " + e.getMessage());
