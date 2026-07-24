@@ -94,7 +94,7 @@ jobs:
           gradle-version: 8.5
 
       # --------------------------------------------------
-      # 6. 构建 APK
+      # 6. 构建 APK（捕获完整日志）
       # --------------------------------------------------
       - name: 构建 APK
         run: |
@@ -104,17 +104,33 @@ jobs:
           echo ""
 
           echo "🔧 Java 版本:"
-          java -version 2>&1 || echo "java not found"
+          java -version 2>&1
           echo ""
 
-          echo "🔧 使用 setup-gradle 提供的 gradle 命令"
-          gradle --version 2>&1 || echo "⚠️ gradle --version 失败"
+          echo "🔧 Gradle 版本:"
+          gradle --version 2>&1
           echo ""
 
-          gradle assemble${BUILD_TYPE^} --no-daemon --stacktrace 2>&1
+          # 捕获完整输出到日志文件
+          gradle assemble${BUILD_TYPE^} --no-daemon --stacktrace 2>&1 | tee /tmp/gradle-build.log
+          RESULT=${PIPESTATUS[0]}
+          echo ""
+          echo "=== 构建退出码: ${RESULT} ==="
+          exit ${RESULT}
 
       # --------------------------------------------------
-      # 7. 上传 APK 为构建产物
+      # 7a. 上传 Gradle 构建日志（即使失败也上传）
+      # --------------------------------------------------
+      - name: 上传构建日志
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: "build-log"
+          path: /tmp/gradle-build.log
+          retention-days: 7
+
+      # --------------------------------------------------
+      # 7b. 上传 APK 为构建产物
       # --------------------------------------------------
       - name: 上传 APK 产物
         uses: actions/upload-artifact@v4
