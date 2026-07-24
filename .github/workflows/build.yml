@@ -1,5 +1,5 @@
 # ============================================================
-# PriorityLocker Pro — 纯 ./gradlew 构建（无缓存，最高兼容性）
+# PriorityLocker Pro — 纯 ./gradlew 构建（调试版：捕获完整日志）
 # ============================================================
 name: Build APK
 
@@ -67,39 +67,67 @@ jobs:
           echo '```' >> $GITHUB_STEP_SUMMARY
           echo "PWD: $(pwd)"
           java -version 2>&1
+          echo "ANDROID_HOME=$ANDROID_HOME"
           echo "GRADLE_VERSION via wrapper:" 
           chmod +x gradlew
           ./gradlew --version --no-daemon 2>&1 || echo "gradlew --version failed"
           echo '```' >> $GITHUB_STEP_SUMMARY
 
       # --------------------------------------------------
-      # 5. 构建 APK（纯 wrapper，无缓存依赖）
+      # 5. 构建 APK（捕获完整日志到文件）
       # --------------------------------------------------
       - name: 构建 APK
+        continue-on-error: true  # 即使失败也继续后续步骤
         run: |
           BUILD_TYPE="${{ inputs.build_type || 'release' }}"
           echo "📦 构建类型: ${BUILD_TYPE}"
-          # 首字母大写 (release -> Release, debug -> Debug)
           CAP_TYPE=$(echo "${BUILD_TYPE}" | sed 's/^./\U&/')
           echo "🧩 命名空间: com.murong.prioritylocker"
           echo ""
 
-          echo "## 📋 Gradle 构建日志" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo '<details><summary>点击展开构建日志</summary>' >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          ./gradlew assemble${CAP_TYPE} --no-daemon --stacktrace 2>&1
-          RESULT=$?
-          echo "=== 构建退出码: ${RESULT} ==="
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          echo '</details>' >> $GITHUB_STEP_SUMMARY
-          exit ${RESULT}
+          # 捕获日志到文件 + 终端
+          ./gradlew assemble${CAP_TYPE} --no-daemon --stacktrace 2>&1 | tee /tmp/gradle-build.log
+          
+          # 记录退出码到文件，供后续步骤读取
+          echo "EXIT_CODE=${PIPESTATUS[0]}" > /tmp/gradle-exit-code.txt
+          echo "=== 构建退出码: ${PIPESTATUS[0]} ==="
 
       # --------------------------------------------------
-      # 6. 上传 APK 为构建产物
+      # 6. 上传构建日志（无论成功失败）
+      # --------------------------------------------------
+      - name: 上传构建日志
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: "gradle-build-log"
+          path: /tmp/gradle-build.log
+          retention-days: 30
+
+      # --------------------------------------------------
+      # 7. 显式标记构建失败（基于记录的退出码）
+      # --------------------------------------------------
+      - name: 检查构建结果
+        if: always()
+        run: |
+          if [ -f /tmp/gradle-exit-code.txt ]; then
+            source /tmp/gradle-exit-code.txt
+            echo "构建退出码: ${EXIT_CODE}"
+            if [ "${EXIT_CODE}" != "0" ]; then
+              echo "❌ 构建失败，退出码: ${EXIT_CODE}"
+              exit ${EXIT_CODE}
+            fi
+          else
+            echo "⚠️ 未找到退出码文件，构建可能未执行"
+          fi
+          echo "## 📋 构建结果" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ 构建成功" >> $GITHUB_STEP_SUMMARY
+
+      # --------------------------------------------------
+      # 8. 上传 APK 为构建产物（仅在成功时）
       # --------------------------------------------------
       - name: 上传 APK 产物
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: "PriorityLocker-Pro-${{ inputs.build_type || 'release' }}"
@@ -109,9 +137,10 @@ jobs:
           retention-days: 30
 
       # --------------------------------------------------
-      # 7. 输出 APK 摘要
+      # 9. 输出 APK 摘要
       # --------------------------------------------------
       - name: APK 信息
+        if: success()
         run: |
           echo "## ✅ 构建产物" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -124,10 +153,10 @@ jobs:
           done
 
       # --------------------------------------------------
-      # 8. 如果打了 tag，上传到 Release
+      # 10. 如果打了 tag，上传到 Release
       # --------------------------------------------------
       - name: 上传到 Release
-        if: github.event_name == 'release'
+        if: github.event_name == 'release' && success()
         uses: softprops/action-gh-release@v2
         with:
           files: app/build/outputs/apk/release/*.apk
