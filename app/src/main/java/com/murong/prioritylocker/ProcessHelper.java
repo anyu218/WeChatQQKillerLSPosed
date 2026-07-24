@@ -1,8 +1,6 @@
 package com.murong.prioritylocker;
 
 import android.os.Process;
-import android.system.Os;
-import android.system.OsConstants;
 import android.text.TextUtils;
 import android.util.ArrayMap;
 
@@ -205,8 +203,8 @@ public class ProcessHelper {
      * 设置进程优先级（等效于 renice -n 19）
      *
      * 使用多种方式来确保生效：
-     * 1. Process.setProcessGroup() → CPU cgroup 控制
-     * 2. Os.setpriority() → 直接 nice 值设置（系统调用）
+     * 1. Process.setProcessGroup() → CPU cgroup 控制（反射调用，Xposed API jar 无此方法 stub）
+     * 2. Os.setpriority() → 直接 nice 值设置（反射调用，Xposed API jar 无此方法 stub）
      * 3. Process.setThreadPriority() → 线程优先级
      *
      * @return true 如果成功设置了优先级
@@ -214,28 +212,37 @@ public class ProcessHelper {
     public static boolean setLowPriority(int pid) {
         boolean success = false;
 
+        // 方法 1：设置进程组为 BACKGROUND（限制 CPU 使用率 ~10%）
+        // THREAD_GROUP_BACKGROUND = 0
+        // 使用反射调用，因为 Xposed API stubs 不包含 setProcessGroup()
         try {
-            // 方法 1：设置进程组为 BACKGROUND（限制 CPU 使用率 ~10%）
-            // THREAD_GROUP_BACKGROUND = 0
-            android.os.Process.setProcessGroup(pid, 0);
+            Class<?> processClass = Class.forName("android.os.Process");
+            java.lang.reflect.Method setGroup = processClass.getMethod("setProcessGroup", int.class, int.class);
+            setGroup.invoke(null, pid, 0);
             success = true;
         } catch (Exception e) {
             ConfigManager.getInstance().log("setProcessGroup(" + pid + ") 失败: " + e.getMessage());
         }
 
+        // 方法 2：直接系统调用 setpriority(PRIO_PROCESS, pid, 19)
+        // 等效于 renice -n 19 -p pid
+        // PRIO_PROCESS = 0 (POSIX 标准值)
+        // 使用反射调用，因为 Xposed API stubs 不包含 setpriority()
         try {
-            // 方法 2：直接系统调用 setpriority(PRIO_PROCESS, pid, 19)
-            // 等效于 renice -n 19 -p pid
-            // PRIO_PROCESS = 0 (POSIX 标准值)
-            Os.setpriority(/* PRIO_PROCESS */ 0, pid, 19);
+            Class<?> osClass = Class.forName("android.system.Os");
+            java.lang.reflect.Method setprio = osClass.getMethod("setpriority", int.class, int.class, int.class);
+            setprio.invoke(null, 0, pid, 19);
             success = true;
         } catch (Exception e) {
             ConfigManager.getInstance().log("Os.setpriority(" + pid + ") 失败: " + e.getMessage());
         }
 
+        // 方法 3：setThreadPriority（对主线程有效）
+        // 反射调用，原因同上
         try {
-            // 方法 3：setThreadPriority（对主线程有效）
-            android.os.Process.setThreadPriority(pid, android.os.Process.THREAD_PRIORITY_LOWEST);
+            Class<?> processClass = Class.forName("android.os.Process");
+            java.lang.reflect.Method setThreadPrio = processClass.getMethod("setThreadPriority", int.class, int.class);
+            setThreadPrio.invoke(null, pid, android.os.Process.THREAD_PRIORITY_LOWEST);
             success = true;
         } catch (Exception e) {
             ConfigManager.getInstance().log("setThreadPriority(" + pid + ") 失败: " + e.getMessage());
