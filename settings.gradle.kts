@@ -3,7 +3,8 @@ pluginManagement {
         google()
         mavenCentral()
         gradlePluginPortal()
-        maven { url = uri("https://api.xposed.info/repo") }
+        // Xposed API 仓库（由 Appodeal Maven 镜像托管）
+        maven { url = uri("https://artifactory.appodeal.com/appodeal-public") }
     }
 }
 
@@ -12,7 +13,8 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
-        maven { url = uri("https://api.xposed.info/repo") }
+        // Xposed API 仓库（由 Appodeal Maven 镜像托管）
+        maven { url = uri("https://artifactory.appodeal.com/appodeal-public") }
     }
 }
 
