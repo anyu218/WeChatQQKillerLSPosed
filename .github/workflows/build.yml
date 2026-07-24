@@ -94,7 +94,7 @@ jobs:
           gradle-version: 8.5
 
       # --------------------------------------------------
-      # 6. 构建 APK（输出到 Step Summary）
+      # 6. 构建 APK（使用 Gradle Wrapper + 输出到 Step Summary）
       # --------------------------------------------------
       - name: 构建 APK
         run: |
@@ -107,12 +107,20 @@ jobs:
           java -version 2>&1 | tee -a /tmp/gradle-build.log
           echo "" | tee -a /tmp/gradle-build.log
 
-          echo "🔧 Gradle 版本:" | tee -a /tmp/gradle-build.log
-          gradle --version 2>&1 | tee -a /tmp/gradle-build.log
-          echo "" | tee -a /tmp/gradle-build.log
-
-          # 捕获构建输出
-          gradle assemble${BUILD_TYPE^} --no-daemon --stacktrace 2>&1 | tee -a /tmp/gradle-build.log
+          # 使用 Gradle Wrapper（更可靠，不依赖 setup-gradle 的缓存）
+          WRAPPER="./gradlew"
+          if [ -f "$WRAPPER" ]; then
+            echo "🔧 使用 Gradle Wrapper: $WRAPPER" | tee -a /tmp/gradle-build.log
+            chmod +x "$WRAPPER"
+            "$WRAPPER" --version 2>&1 | tee -a /tmp/gradle-build.log
+            echo "" | tee -a /tmp/gradle-build.log
+            "$WRAPPER" assemble${BUILD_TYPE^} --no-daemon --stacktrace 2>&1 | tee -a /tmp/gradle-build.log
+          else
+            echo "🔧 Wrapper 不存在，使用系统 gradle 命令" | tee -a /tmp/gradle-build.log
+            gradle --version 2>&1 | tee -a /tmp/gradle-build.log
+            echo "" | tee -a /tmp/gradle-build.log
+            gradle assemble${BUILD_TYPE^} --no-daemon --stacktrace 2>&1 | tee -a /tmp/gradle-build.log
+          fi
           RESULT=${PIPESTATUS[0]}
 
           echo "" | tee -a /tmp/gradle-build.log
